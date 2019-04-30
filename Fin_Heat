@@ -1,0 +1,410 @@
+#include<iostream>
+#include<fstream>
+#include<cmath>
+#include<iomanip>
+#include<string>
+#include"Tri.h" 
+#include"D:\tritranprogramming\ploting\dislin.h"
+
+using namespace std;
+
+
+class Fin
+{
+	public:
+		Fin();
+		void read_constant();
+		void Compute_P_A();
+		void Input_H();
+		double get_x();
+		double get_H();
+		double get_Perimeter();
+		double get_Area();
+		double get_eps();
+		double get_sigm();
+		double get_K();
+		double get_Ts();
+	private:
+		double x;
+		double H, H_1,H_2;
+		double diameter_1;
+		double diameter_2;
+		double K;
+		double epsilon;
+		double sigma;
+		double T_s;
+		double Area;
+		double Perimeter;
+		double pi;
+};
+
+
+
+
+void setup(Fin fin1,int &n,double &delta_x, double sqr_delta_x,double T[]);
+void Compute_C(Fin fin1, double &C1,double &C2);
+void Compute_square_delta_x(double delta_x,double &sqr_delta_x);
+void Compute_T(Fin fin1,int n, double T[],double sqr_delta_x, double C1, double C2,double T_s);
+void Output_Temp(int n,double T[],double delta_x);
+void Plotting(int n,float xray[],float yray[]);
+
+
+int main()
+{
+	Fin fin1;
+	int n=10000;
+	double C1, C2,x,delta_x,sqr_delta_x,T_s;
+	double *T;
+	T = new double [n];
+	float *xray,*yray;
+	xray = new float [n];
+	yray = new float [n];	
+	
+	char answer;
+	cout<<"\t\t\t\t\t\t************************************";			//Please don't mind me, I just wanted to have some more lines.
+	cout<<"\n\t\t\t\t\t\t*ENGR-50 FALL 2018 FINAL PROJECT.***";
+	cout<<"\n\t\t\t\t\t\t*INSTRUCTED BY DR.A H TABRIZI.******";
+	cout<<"\n\t\t\t\t\t\t*STUDENT: TRI TRAN, H.**************\n";
+	cout<<"\t\t\t\t\t\t************************************";
+	
+	cout<<"\nThis program is supposed to use for predicting the Heat\nthat transfers through the Fin via Convection and Radiation.";
+	cout<<"\nAll numbers are approximated.\n";
+	cout<<endl;
+do
+	{
+		fin1.read_constant();
+		setup(fin1,n,delta_x,sqr_delta_x,T);
+		fin1.Compute_P_A();
+		fin1.Input_H();
+		Compute_C(fin1,C1,C2);
+		Compute_T(fin1,n,T,sqr_delta_x,C1,C2,T_s);
+		Output_Temp(n,T,delta_x);
+		Plotting(n,xray,yray);
+		
+		cout<<"\n\n\nDo you want to re-do? (Y/N): ";
+		cin>>answer;
+		answer=toupper(answer);
+		if(answer!='Y')
+		{
+			cout<<"All your data has been storage in the Default directory.\n";
+		}
+		else
+		{
+			for(int i=0;i<10;i++)
+			{
+				cout<<"**********************";
+				cout<<endl;
+			}
+		}
+		
+	}while (answer=='Y');
+
+return 0;
+}
+
+Fin::Fin() //Constructor of Class Fin;
+{
+	TRI(pi);
+	x=0;
+	H_1=0;
+	H_2=0;
+	diameter_1=0;
+	diameter_2=0;
+	K=0;
+	epsilon=0;
+	sigma=0;
+	T_s=293;
+}
+
+//From here down is for functions that belong to Class Fin;
+
+void Fin::read_constant()
+{	
+	double discard;
+	int key;
+	char answer;
+	string fname;
+	ifstream read;
+
+	cout<<"\nDo you have any file to input?\nOr else the input file will be loaded automatically (Y/N): ";
+	cin>>answer;
+	answer=toupper(answer);
+
+	if(answer=='Y')
+	{
+		do
+			{
+			
+				cout<<"Input your file name: ";
+				cin>>fname;
+				read.open(fname.c_str());
+			
+				if(read.fail())
+				{
+					cout<<"\nThe file doesn't exist within the same directory with the program!!\n";
+					cout<<"Please provide the file again. ";
+					cin.clear();
+					read.close();
+				}
+			}while(read.fail());
+
+	}
+	else
+	{read.open("Fixed_Constant.txt");}
+	
+	read>>x>>epsilon>>discard>>T_s>>sigma;
+	read.close();
+	cout<<endl<<endl;
+
+	cout<<"\nHit 1 for Copper, 2 for Aluminum: ";
+	cin>>key;
+	cout<<endl;
+	
+	if(key!=1&&key!=2)
+	{cout<<"\nPlease re-check your input.\n";}
+
+	switch (key)
+	{
+		case 1:
+			fname="Copper.txt";
+			break;
+		case 2:
+			fname="Aluminum.txt";
+			break;
+		default:
+			break;
+	}
+	
+	read.open(fname.c_str());
+	read>>K>>H_1>>H_2>>diameter_1>>diameter_2;
+	read.close();	
+}
+
+void Fin::Compute_P_A()
+{
+	double key;
+	double diameter;
+	ofstream write;
+	cout<<"Please provide the diameter of the Fin in term of meter.\n";	
+	cout<<"What is the diameter of the Fin? Type:\n1 for 0.005m\n2 for 0.01m.\nA number if you have another input\n";
+	cin>>key;
+	cout<<endl;
+
+			if(key==1) diameter=diameter_1;
+
+			if(key==2) diameter=diameter_2;
+				
+			if(key!=1&&key!=2)
+				{
+					if(!cin.fail()) diameter=key;
+					else cout<<"Please re-check your input.\n";
+				}
+				
+	Area=pi*pow((diameter/2),2);
+	Perimeter=diameter*pi;
+	write.open("P_and_A.txt");
+	write<<"Perimeter: "<<Perimeter<<endl<<"Area: "<<Area;
+	write.close();
+}
+
+void Fin::Input_H()
+{
+	double key;
+	
+	cout<<"Please provide the Heat Transfer Coefficient of the Fin\n";
+	cout<<"Type:\n1. 40 W/(m^2.K)\n2. 100 W/(m^2.K)\nOr your own input\n";
+	cin>>key;
+	cout<<endl;
+
+			if(key==1) H=H_1;
+
+			if(key==2) H=H_2;
+				
+			if(key!=1&&key!=2)
+				{
+					if(!cin.fail()) H=key;
+					else cout<<"Please re-check your input.\n";
+				
+				}
+}
+
+double Fin::get_x() 
+{
+	return x;
+}
+
+double Fin::get_H()
+{
+	return H;
+}
+
+double Fin::get_Perimeter()
+{
+	return Perimeter;
+}
+
+double Fin::get_Area()
+{
+	return Area;
+}
+
+double Fin::get_eps()
+{
+	return epsilon;
+}
+
+double Fin::get_sigm()
+{
+	return sigma;
+}
+
+double Fin::get_K()
+{
+	return K;
+}
+
+double Fin::get_Ts()
+{
+	return T_s;
+}
+
+//From here down is for functions;
+
+void setup(Fin fin1,int &n,double &delta_x, double sqr_delta_x, double T[])
+{
+	double discard;
+	ifstream read;
+	ofstream write;
+	
+	cout<<"\nHow many divisions do you want ?(From 30 to 50): ";
+	cin>>n;
+	cout<<endl;
+	
+	delta_x=fin1.get_x()/n;								//Get x value from Fin via get_x() commutator;
+	Compute_square_delta_x(delta_x,sqr_delta_x);		//Calling the function that computes the value for delta_x square;
+	
+	read.open("Fixed_Constant.txt");
+	for(int i=0;i<n;i++)
+	{
+		T[i]=293;
+	}
+	read.close();
+	read.open("Fixed_Constant.txt");
+	read>>discard>>discard>>T[0]>>T[n-1]; // and then read T[0] and T[n-1] 
+	read.close();
+	write.open("Temp.txt");
+	for(int i=0;i<n;i++)
+	{	
+		write<<setw(9)<<"T["<<i<<"]: "<<T[i];
+		if((i+1)%4==0)
+		{
+			write<<endl;
+		}
+	}
+	write.close();
+}
+
+void Compute_C(Fin fin1,double &C1,double &C2)
+{
+	ofstream write;
+	double H, epsilon, sigma, K;
+	double P, A;
+	
+	A=fin1.get_Area();
+	P=fin1.get_Perimeter();
+	H=fin1.get_H();
+	epsilon=fin1.get_eps();
+	sigma=fin1.get_sigm();
+	K=fin1.get_K();
+	
+	C1=(H*P)/(K*A);
+	C2=(epsilon*sigma*P)/(K*A);
+	write.open("Check_Constants.txt");
+	write<<"C1: "<<C1<<endl<<"C2: "<<C2;
+	write.close();
+}
+
+void Compute_square_delta_x(double delta_x,double &sqr_delta_x)
+{
+	sqr_delta_x=pow(delta_x,2);
+}
+
+void Compute_T(Fin fin1, int n, double T[],double sqr_delta_x, double C1, double C2,double T_s) 
+{
+
+	T_s=fin1.get_Ts();
+
+	for(int i=0;i<100;i++)
+		{
+			for(int j=1;j<n-1;j++)
+			{
+				T[j]=(T[j+1]+T[j-1]+(sqr_delta_x)*(C1*T_s + C2*(pow(T_s,4)+3*pow(T[j-1],4))))/(2+sqr_delta_x*(C1+4*C2*pow(T[j-1],3)));
+			}
+		}
+
+
+	for(int i=0;i<n;i++)
+	{
+		if(i%15==0)
+		{
+			if(i%4==0)
+			{cout<<endl;}
+			cout<<setw(10)<<T[i];
+		}
+	}
+	cout<<endl<<T[n-1];
+}
+
+void Output_Temp(int n,double T[],double delta_x)
+{
+	double length=0;
+	ofstream write;
+
+	write.open("Temperature_Report.txt");
+	
+	for(int i=0;i<n;i++)
+	{
+		write<<length<<setw(10)<<T[i]<<endl;
+		length=length+delta_x;
+	}
+	
+	write.close();
+}
+
+void Plotting(int n,float xray[],float yray[])
+{
+	ifstream read;
+	int ic;
+	
+	read.open("Temperature_Report.txt");
+
+	for(int i=0;i<n;i++)
+	{
+		read>>xray[i]>>yray[i];
+	}
+	read.close();
+	
+	metafl("pdf");//Creates screen output. To create PDF output use "pdf"
+	disini();
+	pagera();
+	complx();
+	axspos(450,1800);
+	axslen(2200,1200);
+	name("Distance from Processor (m)","x");
+	name("Temperature (K)","y");
+	labdig(2,"x");
+	ticks(10,"x");
+	ticks(30,"y");
+	titlin("The variation of Heat per unit length",1);
+	ic=intrgb(0.95,0.95,0.95);
+	axsbgd(ic);
+	graf(0.,.1,0.,.01,200.,500,200.,50.);
+	setrgb(0.7,0.7,0.7);
+	grid(1,1);
+	color("fore");
+	height(50);
+	title();
+	color("green");
+	curve(xray,yray,n); //plots cos curve
+	disfin(); //Ends plot session. Must include.
+}
